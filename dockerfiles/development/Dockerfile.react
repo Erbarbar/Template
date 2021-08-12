@@ -1,0 +1,12 @@
+FROM node
+
+WORKDIR /react-app
+
+ENV PATH /react-app/node_modules/.bin:$PATH
+
+COPY react/package.json ./
+RUN npm install
+
+ENV CHOKIDAR_USEPOLLING 'true'
+
+CMD npm start

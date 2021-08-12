@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  react:
+    build:
+      context: ./
+      dockerfile: ./dockerfiles/development/Dockerfile.react
+    expose:
+      - 3000
+    volumes:
+      - ./react/public:/react-app/public
+      - ./react/src:/react-app/src
+      - /react-app/node_modules
+
+  django:
+    build:
+      context: ./
+      dockerfile: ./dockerfiles/development/Dockerfile.django
+    command: gunicorn project.wsgi:application --bind 0.0.0.0:8000 --reload
+    depends_on:
+      - database
+    env_file:
+      - ./env/development.env
+    expose:
+      - 8000
+    volumes:
+      - ./django/project:/django/project
+      - ./django/app:/django/app
+      - static_volume:/django/staticfiles
+      - media_volume:/django/mediafiles
+
+  database:
+    image: postgres
+    env_file:
+      - ./env/development.env
+    volumes:
+      - database_volume:/var/lib/postgresql/data/
+
+  nginx:
+    image: nginx:alpine
+    command: ['nginx-debug', '-g', 'daemon off;']
+    depends_on:
+      - react
+      - django
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/development/:/etc/nginx/conf.d
+      - static_volume:/home/app/web/staticfiles
+      - media_volume:/home/app/web/mediafiles
+
+volumes:
+  database_volume:
+  static_volume:
+  media_volume:

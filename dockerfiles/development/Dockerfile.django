@@ -1,0 +1,42 @@
+FROM python as builder
+
+# set work directory
+WORKDIR /usr/src/app
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# install psycopg2 dependencies
+# RUN apt-get update \
+    # && apt-get install postgresql-dev gcc python3-dev musl-dev libffi-dev openssl-dev
+
+
+# install dependencies
+COPY ./django/requirements.txt .
+RUN pip install --upgrade pip \
+    && pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+
+FROM python
+
+RUN mkdir -p /django \
+    && mkdir django/staticfiles \
+    && mkdir django/mediafiles
+WORKDIR /django
+
+# install dependencies
+RUN apt-get update \
+    && apt-get install dos2unix \
+    && apt install -y netcat
+    # && apt-get install libpq postgresql-dev gcc python3-dev musl-dev libffi-dev openssl-dev
+COPY --from=builder /usr/src/app/wheels /wheels
+
+RUN pip install --upgrade pip \
+    && pip install --no-cache /wheels/*
+
+# run entrypoint.sh
+COPY ./django/entrypoint.sh ./django/manage.py ./
+
+RUN chmod +x entrypoint.sh \
+    && dos2unix entrypoint.sh
+ENTRYPOINT ["./entrypoint.sh"]
